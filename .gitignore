@@ -1,0 +1,41 @@
+# Build and intermediate files
+/build/
+/CMakeFiles/
+/CMakeCache.txt
+/cmake_install.cmake
+/Makefile
+/Makefile2
+
+# Object files and libraries
+*.o
+*.obj
+*.so
+*.a
+*.lib
+*.dll
+
+# Executables
+*.exe
+
+# IDE/editor
+/.vscode/
+*.swp
+*.swo
+
+# Logs, databases, coverage
+*.log
+*.sqlite
+coverage/
+
+# Test artifacts and fuzzing corpus
+/tests/corpus/
+
+# macOS
+.DS_Store
+
+# User-specific
+*.user
+*.user.*
+
+# CTest
+/Testing/

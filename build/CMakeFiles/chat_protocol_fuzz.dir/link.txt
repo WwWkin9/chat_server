@@ -1,0 +1,1 @@
+/usr/bin/c++ CMakeFiles/chat_protocol_fuzz.dir/tests/chat_protocol_fuzz.cpp.o CMakeFiles/chat_protocol_fuzz.dir/src/ChatProtocol.cpp.o -o chat_protocol_fuzz 
