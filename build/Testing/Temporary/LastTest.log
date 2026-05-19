@@ -1,10 +1,10 @@
-Start testing: May 19 14:27 CST
+Start testing: May 19 14:54 CST
 ----------------------------------------------------------
 1/2 Testing: chat_server_tests
 1/2 Test: chat_server_tests
 Command: "/home/lin/chat_server/build/chat_server_tests"
 Directory: /home/lin/chat_server/build
-"chat_server_tests" start time: May 19 14:27 CST
+"chat_server_tests" start time: May 19 14:54 CST
 Output:
 ----------------------------------------------------------
 chat_server_tests passed
@@ -12,7 +12,7 @@ chat_server_tests passed
 Test time =   0.01 sec
 ----------------------------------------------------------
 Test Passed.
-"chat_server_tests" end time: May 19 14:27 CST
+"chat_server_tests" end time: May 19 14:54 CST
 "chat_server_tests" time elapsed: 00:00:00
 ----------------------------------------------------------
 
@@ -20,16 +20,16 @@ Test Passed.
 2/2 Test: chat_protocol_fuzz
 Command: "/home/lin/chat_server/build/chat_protocol_fuzz" "--corpus" "/home/lin/chat_server/tests/corpus/protocol" "--iterations" "5000"
 Directory: /home/lin/chat_server/build
-"chat_protocol_fuzz" start time: May 19 14:27 CST
+"chat_protocol_fuzz" start time: May 19 14:54 CST
 Output:
 ----------------------------------------------------------
 fuzz run complete
 <end of output>
-Test time =   0.17 sec
+Test time =   0.21 sec
 ----------------------------------------------------------
 Test Passed.
-"chat_protocol_fuzz" end time: May 19 14:27 CST
+"chat_protocol_fuzz" end time: May 19 14:54 CST
 "chat_protocol_fuzz" time elapsed: 00:00:00
 ----------------------------------------------------------
 
-End testing: May 19 14:27 CST
+End testing: May 19 14:54 CST
