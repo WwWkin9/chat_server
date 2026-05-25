@@ -85,12 +85,12 @@ clean: CMakeFiles/chat_protocol_fuzz.dir/clean
 CMakeFiles/chat_server.dir/all:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/chat_server.dir/build.make CMakeFiles/chat_server.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/chat_server.dir/build.make CMakeFiles/chat_server.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/lin/chat_server/build/CMakeFiles --progress-num=4,5,6,7,8,9,10,11,12,13,14,15,16,17 "Built target chat_server"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/lin/chat_server/build/CMakeFiles --progress-num=4,5,6,7,8,9,10,11,12,13,14,15,16,17,18 "Built target chat_server"
 .PHONY : CMakeFiles/chat_server.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/chat_server.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/lin/chat_server/build/CMakeFiles 14
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/lin/chat_server/build/CMakeFiles 15
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/chat_server.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/lin/chat_server/build/CMakeFiles 0
 .PHONY : CMakeFiles/chat_server.dir/rule
@@ -111,12 +111,12 @@ CMakeFiles/chat_server.dir/clean:
 CMakeFiles/chat_server_tests.dir/all:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/chat_server_tests.dir/build.make CMakeFiles/chat_server_tests.dir/depend
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/chat_server_tests.dir/build.make CMakeFiles/chat_server_tests.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/lin/chat_server/build/CMakeFiles --progress-num=18,19,20,21,22,23,24,25,26,27 "Built target chat_server_tests"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --progress-dir=/home/lin/chat_server/build/CMakeFiles --progress-num=19,20,21,22,23,24,25,26,27,28,29 "Built target chat_server_tests"
 .PHONY : CMakeFiles/chat_server_tests.dir/all
 
 # Build rule for subdir invocation for target.
 CMakeFiles/chat_server_tests.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/lin/chat_server/build/CMakeFiles 10
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/lin/chat_server/build/CMakeFiles 11
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/chat_server_tests.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/lin/chat_server/build/CMakeFiles 0
 .PHONY : CMakeFiles/chat_server_tests.dir/rule

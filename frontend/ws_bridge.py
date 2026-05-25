@@ -37,6 +37,14 @@ async def handle_ws(websocket, path, server_host, server_port):
                 room = data.get('room', 0)
                 username = data.get('username', 'guest')
                 body = f"CHAT|1|JOIN|{room}|{username}"
+            elif data.get('type') == 'register':
+                username = data.get('username', 'guest')
+                password = data.get('password', '')
+                body = f"CHAT|1|REGISTER|{username}|{password}"
+            elif data.get('type') == 'login':
+                username = data.get('username', 'guest')
+                password = data.get('password', '')
+                body = f"CHAT|1|LOGIN|{username}|{password}"
             elif data.get('type') == 'msg':
                 text = data.get('text', '')
                 body = f"CHAT|1|MSG|{text}"

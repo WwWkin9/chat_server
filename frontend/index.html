@@ -11,6 +11,26 @@
   <div class="backdrop backdrop-a"></div>
   <div class="backdrop backdrop-b"></div>
 
+  <section class="auth-overlay" id="authOverlay" aria-live="polite">
+    <div class="auth-card panel">
+      <p class="eyebrow">Secure Access</p>
+      <h2>登录到聊天服务</h2>
+      <p class="auth-subtitle">支持注册新账号或使用已有账号登录。</p>
+      <div class="auth-mode" role="tablist" aria-label="认证模式">
+        <button class="auth-mode-btn active" id="modeLogin" type="button" data-mode="login">登录</button>
+        <button class="auth-mode-btn" id="modeRegister" type="button" data-mode="register">注册</button>
+      </div>
+      <form id="authForm" class="auth-form">
+        <label for="authUsername">用户名</label>
+        <input id="authUsername" name="username" type="text" maxlength="32" autocomplete="username" required />
+        <label for="authPassword">密码</label>
+        <input id="authPassword" name="password" type="password" maxlength="128" autocomplete="current-password" required />
+        <button class="composer-send auth-submit" id="authSubmit" type="submit">登录</button>
+      </form>
+      <p class="auth-hint" id="authHint">提示：首次使用请切换到“注册”。</p>
+    </div>
+  </section>
+
   <main class="shell chat-app">
     <aside class="panel sidebar">
       <div class="brand-row">
@@ -30,11 +50,12 @@
       <div class="profile-card">
         <div class="avatar large">UI</div>
         <div>
-          <strong>lin</strong>
+          <strong id="profileUsername">未登录</strong>
           <p>在线 · 正在演示</p>
         </div>
         <span class="profile-badge">v1</span>
       </div>
+      <button class="logout-btn" id="logoutBtn" type="button" disabled>退出登录</button>
 
       <label class="search-box" for="conversationSearch">
         <span>⌕</span>

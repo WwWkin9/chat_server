@@ -381,6 +381,33 @@ src/Metrics.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/chat_server_tests.dir/build.make CMakeFiles/chat_server_tests.dir/src/Metrics.cpp.s
 .PHONY : src/Metrics.cpp.s
 
+src/PasswordHasher.o: src/PasswordHasher.cpp.o
+.PHONY : src/PasswordHasher.o
+
+# target to build an object file
+src/PasswordHasher.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chat_server.dir/build.make CMakeFiles/chat_server.dir/src/PasswordHasher.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chat_server_tests.dir/build.make CMakeFiles/chat_server_tests.dir/src/PasswordHasher.cpp.o
+.PHONY : src/PasswordHasher.cpp.o
+
+src/PasswordHasher.i: src/PasswordHasher.cpp.i
+.PHONY : src/PasswordHasher.i
+
+# target to preprocess a source file
+src/PasswordHasher.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chat_server.dir/build.make CMakeFiles/chat_server.dir/src/PasswordHasher.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chat_server_tests.dir/build.make CMakeFiles/chat_server_tests.dir/src/PasswordHasher.cpp.i
+.PHONY : src/PasswordHasher.cpp.i
+
+src/PasswordHasher.s: src/PasswordHasher.cpp.s
+.PHONY : src/PasswordHasher.s
+
+# target to generate assembly for a file
+src/PasswordHasher.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chat_server.dir/build.make CMakeFiles/chat_server.dir/src/PasswordHasher.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/chat_server_tests.dir/build.make CMakeFiles/chat_server_tests.dir/src/PasswordHasher.cpp.s
+.PHONY : src/PasswordHasher.cpp.s
+
 src/PersistenceSqlite.o: src/PersistenceSqlite.cpp.o
 .PHONY : src/PersistenceSqlite.o
 
@@ -588,6 +615,9 @@ help:
 	@echo "... src/Metrics.o"
 	@echo "... src/Metrics.i"
 	@echo "... src/Metrics.s"
+	@echo "... src/PasswordHasher.o"
+	@echo "... src/PasswordHasher.i"
+	@echo "... src/PasswordHasher.s"
 	@echo "... src/PersistenceSqlite.o"
 	@echo "... src/PersistenceSqlite.i"
 	@echo "... src/PersistenceSqlite.s"

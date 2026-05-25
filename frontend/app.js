@@ -16,10 +16,83 @@ const infoStatus = document.getElementById('infoStatus');
 const infoRoom = document.getElementById('infoRoom');
 const infoTime = document.getElementById('infoTime');
 const memberList = document.getElementById('memberList');
+const authOverlay = document.getElementById('authOverlay');
+const authForm = document.getElementById('authForm');
+const authUsername = document.getElementById('authUsername');
+const authPassword = document.getElementById('authPassword');
+const authHint = document.getElementById('authHint');
+const authSubmit = document.getElementById('authSubmit');
+const modeLogin = document.getElementById('modeLogin');
+const modeRegister = document.getElementById('modeRegister');
+const profileUsername = document.getElementById('profileUsername');
+const logoutBtn = document.getElementById('logoutBtn');
+
+const LAST_USERNAME_KEY = 'chat.lastUsername';
 
 // WebSocket bridge 配置 (参见 frontend/BRIDGE_README.md)
-const WS_URL = 'ws://127.0.0.1:8765';
+const WS_URL = new URLSearchParams(window.location.search).get('ws') || 'ws://127.0.0.1:8765';
 let ws = null;
+let authMode = 'login';
+let currentUser = '';
+let isAuthenticated = false;
+
+function persistLastUsername(username) {
+  if (!username) {
+    return;
+  }
+  try {
+    window.localStorage.setItem(LAST_USERNAME_KEY, username);
+  } catch (e) {
+    console.warn('localStorage set failed', e);
+  }
+}
+
+function loadLastUsername() {
+  try {
+    return window.localStorage.getItem(LAST_USERNAME_KEY) || '';
+  } catch (e) {
+    console.warn('localStorage get failed', e);
+    return '';
+  }
+}
+
+function setAuthenticatedState(authenticated, username = '') {
+  isAuthenticated = authenticated;
+  const displayName = authenticated && username ? username : '未登录';
+  profileUsername.textContent = displayName;
+  logoutBtn.disabled = !authenticated;
+  if (authenticated) {
+    authOverlay.classList.add('hidden');
+    setChatEnabled(true);
+  } else {
+    authOverlay.classList.remove('hidden');
+    setChatEnabled(false);
+  }
+}
+
+function logout() {
+  currentUser = '';
+  authPassword.value = '';
+  authHint.textContent = '已退出登录，请重新登录。';
+  statusText.textContent = '已退出认证';
+  setAuthenticatedState(false);
+}
+
+function setAuthMode(nextMode) {
+  authMode = nextMode;
+  const loginActive = authMode === 'login';
+  modeLogin.classList.toggle('active', loginActive);
+  modeRegister.classList.toggle('active', !loginActive);
+  authSubmit.textContent = loginActive ? '登录' : '注册并登录';
+  authHint.textContent = loginActive
+    ? '使用已注册的账号登录。'
+    : '将创建账号并自动登录。';
+}
+
+function setChatEnabled(enabled) {
+  messageInput.disabled = !enabled;
+  composer.querySelector('.composer-send').disabled = !enabled;
+}
 
 function connectWs() {
   try {
@@ -32,8 +105,10 @@ function connectWs() {
 
   ws.addEventListener('open', () => {
     statusText.textContent = `已连接桥接 ${WS_URL}`;
-    const roomId = parseInt((activeConversation.room || '').replace('#', ''), 10) || 0;
-    ws.send(JSON.stringify({ type: 'join', room: roomId, username: 'lin' }));
+    authHint.textContent = '桥接已连接，请先登录或注册。';
+    if (currentUser && authPassword.value) {
+      sendAuth(currentUser, authPassword.value);
+    }
   });
 
   ws.addEventListener('close', () => {
@@ -50,6 +125,10 @@ function connectWs() {
   ws.addEventListener('message', (evt) => {
     try {
       const obj = JSON.parse(evt.data);
+      if (obj.type === 'error' && obj.message) {
+        authHint.textContent = `桥接错误：${obj.message}`;
+        return;
+      }
       if (obj.type === 'frame' && obj.body) {
         handleIncomingFrame(obj.body);
       }
@@ -68,6 +147,24 @@ function sendMsgToBridge(text) {
   return true;
 }
 
+function sendJoinAfterAuth() {
+  if (!ws || ws.readyState !== WebSocket.OPEN || !isAuthenticated || !currentUser) {
+    return;
+  }
+  const roomId = parseInt((activeConversation.room || '').replace('#', ''), 10) || 0;
+  ws.send(JSON.stringify({ type: 'join', room: roomId, username: currentUser }));
+}
+
+function sendAuth(username, password) {
+  if (!ws || ws.readyState !== WebSocket.OPEN) {
+    authHint.textContent = '尚未连接桥接，请稍候重试。';
+    return;
+  }
+  const type = authMode === 'register' ? 'register' : 'login';
+  ws.send(JSON.stringify({ type, username, password }));
+  authHint.textContent = authMode === 'register' ? '正在注册账号...' : '正在登录...';
+}
+
 function handleIncomingFrame(body) {
   if (typeof body !== 'string') return;
   if (body.startsWith('CHAT|')) {
@@ -83,7 +180,20 @@ function handleIncomingFrame(body) {
       return;
     }
     if (parts[2] === 'AUTH_ACK') {
-      appendMessage('server', 'SV', `认证成功: ${parts.slice(3).join('|')}`, 'incoming');
+      const username = parts.slice(3).join('|');
+      currentUser = username;
+      persistLastUsername(username);
+      authUsername.value = username;
+      setAuthenticatedState(true, username);
+      appendMessage('server', 'SV', `认证成功: ${username}`, 'incoming');
+      statusText.textContent = `认证成功 · ${activeConversation.room}`;
+      sendJoinAfterAuth();
+      return;
+    }
+    if (parts[2] === 'ERR') {
+      const text = parts.slice(4).join('|') || '认证失败';
+      authHint.textContent = text;
+      appendMessage('server', 'SV', `错误: ${text}`, 'incoming');
       return;
     }
   }
@@ -300,6 +410,11 @@ quickReplies.addEventListener('click', (event) => {
 
 composer.addEventListener('submit', (event) => {
   event.preventDefault();
+  if (!isAuthenticated) {
+    authHint.textContent = '请先登录后再发送消息。';
+    authOverlay.classList.remove('hidden');
+    return;
+  }
   const value = messageInput.value.trim();
   if (!value) {
     return;
@@ -312,6 +427,21 @@ composer.addEventListener('submit', (event) => {
   messageInput.focus();
 });
 
+authForm.addEventListener('submit', (event) => {
+  event.preventDefault();
+  const username = authUsername.value.trim();
+  const password = authPassword.value;
+  if (!username || !password) {
+    authHint.textContent = '请输入用户名和密码。';
+    return;
+  }
+  currentUser = username;
+  sendAuth(username, password);
+});
+
+modeLogin.addEventListener('click', () => setAuthMode('login'));
+modeRegister.addEventListener('click', () => setAuthMode('register'));
+
 document.querySelectorAll('.ghost-action').forEach((button) => {
   button.addEventListener('click', () => {
     messageInput.value = button.textContent;
@@ -321,6 +451,17 @@ document.querySelectorAll('.ghost-action').forEach((button) => {
 
 renderConversationList();
 setActiveConversation(activeConversation.id);
+setAuthMode('login');
+setAuthenticatedState(false);
+
+const lastUsername = loadLastUsername();
+if (lastUsername) {
+  authUsername.value = lastUsername;
+}
+
+logoutBtn.addEventListener('click', () => {
+  logout();
+});
 
 // 启动 WS 桥接
 connectWs();

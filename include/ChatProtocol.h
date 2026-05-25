@@ -9,6 +9,7 @@
 constexpr std::uint16_t kChatProtocolVersion = 1;
 constexpr std::size_t kChatProtocolMaxFrameBytes = 1024;
 constexpr std::size_t kChatProtocolMaxUsernameBytes = 32;
+constexpr std::size_t kChatProtocolMaxPasswordBytes = 128;
 constexpr std::size_t kChatProtocolMaxMessageBytes = 512;
 constexpr std::size_t kChatProtocolMaxErrorMessageBytes = 128;
 
@@ -17,6 +18,8 @@ enum class ChatMessageType
     Join,
     Message,
     Auth,
+    Register,
+    Login,
     AuthAck,
     Heartbeat,
     ErrorResponse
@@ -53,6 +56,12 @@ struct ChatAuthMessage
     std::string token;
 };
 
+struct ChatCredentialMessage
+{
+    std::string username;
+    std::string password;
+};
+
 struct ChatAuthAckMessage
 {
     std::string username;
@@ -64,7 +73,8 @@ struct ChatErrorResponse
     std::string message;
 };
 
-using ChatProtocolPayload = std::variant<ChatHeartbeatMessage, ChatJoinMessage, ChatTextMessage, ChatErrorResponse, ChatAuthMessage, ChatAuthAckMessage>;
+using ChatProtocolPayload = std::variant<ChatHeartbeatMessage, ChatJoinMessage, ChatTextMessage, ChatErrorResponse,
+                                         ChatAuthMessage, ChatCredentialMessage, ChatAuthAckMessage>;
 
 struct ChatProtocolMessage
 {

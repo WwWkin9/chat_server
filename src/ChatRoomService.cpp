@@ -1,5 +1,6 @@
 #include "../include/Logger.h"
 #include "Metrics.h"
+#include "../include/PasswordHasher.h"
 #include <iostream>
 #include "../include/ChatRoomService.h"
 #include "../include/Metrics.h"
@@ -146,7 +147,8 @@ void ChatRoomService::processIncomingFrame(int clientFd, ChatSession& session, c
     }
 
     // authentication handling
-    bool requireAuth = !cfg_.authTokenToUser.empty();
+    const bool supportsPasswordAuth = static_cast<bool>(persistence_);
+    const bool requireAuth = supportsPasswordAuth || !cfg_.authTokenToUser.empty();
     if (!session.joined)
     {
         if (!session.authenticated)
@@ -167,6 +169,62 @@ void ChatRoomService::processIncomingFrame(int clientFd, ChatSession& session, c
                 session.username = it->second;
 
                 // send auth ack
+                ChatProtocolMessage ack = ChatProtocolMessage{kChatProtocolVersion, ChatMessageType::AuthAck,
+                                                              ChatProtocolPayload{ChatAuthAckMessage{session.username}}};
+                if (!sendMessage(clientFd, encodeChatProtocolMessage(ack)))
+                {
+                    disconnectClient(clientFd, "output buffer full");
+                }
+                return;
+            }
+
+            if (message->type == ChatMessageType::Register || message->type == ChatMessageType::Login)
+            {
+                if (!supportsPasswordAuth)
+                {
+                    sendErrorOrDisconnect(clientFd, sendMessage, disconnectClient, ChatProtocolErrorCode::InvalidField,
+                                          "password auth is unavailable", "output buffer full");
+                    return;
+                }
+
+                const auto& credentials = std::get<ChatCredentialMessage>(message->payload);
+                if (message->type == ChatMessageType::Register)
+                {
+                    std::string existingSalt;
+                    std::string existingHash;
+                    if (persistence_->getUserCredentials(credentials.username, existingSalt, existingHash))
+                    {
+                        sendErrorOrDisconnect(clientFd, sendMessage, disconnectClient,
+                                              ChatProtocolErrorCode::InvalidField,
+                                              "username already exists", "output buffer full");
+                        return;
+                    }
+
+                    const std::string saltHex = generateSaltHex();
+                    const std::string passwordHashHex = hashPassword(credentials.password, saltHex);
+                    if (saltHex.empty() || passwordHashHex.empty() ||
+                        !persistence_->createUser(credentials.username, saltHex, passwordHashHex))
+                    {
+                        sendErrorOrDisconnect(clientFd, sendMessage, disconnectClient,
+                                              ChatProtocolErrorCode::InvalidField,
+                                              "failed to create user", "output buffer full");
+                        return;
+                    }
+                }
+
+                std::string saltHex;
+                std::string passwordHashHex;
+                if (!persistence_->getUserCredentials(credentials.username, saltHex, passwordHashHex) ||
+                    !verifyPassword(credentials.password, saltHex, passwordHashHex))
+                {
+                    sendErrorOrDisconnect(clientFd, sendMessage, disconnectClient,
+                                          ChatProtocolErrorCode::InvalidField,
+                                          "invalid username or password", "output buffer full");
+                    return;
+                }
+
+                session.authenticated = true;
+                session.username = credentials.username;
                 ChatProtocolMessage ack = ChatProtocolMessage{kChatProtocolVersion, ChatMessageType::AuthAck,
                                                               ChatProtocolPayload{ChatAuthAckMessage{session.username}}};
                 if (!sendMessage(clientFd, encodeChatProtocolMessage(ack)))

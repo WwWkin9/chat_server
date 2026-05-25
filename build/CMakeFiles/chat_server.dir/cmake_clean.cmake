@@ -15,6 +15,8 @@ file(REMOVE_RECURSE
   "CMakeFiles/chat_server.dir/src/Logger.cpp.o.d"
   "CMakeFiles/chat_server.dir/src/Metrics.cpp.o"
   "CMakeFiles/chat_server.dir/src/Metrics.cpp.o.d"
+  "CMakeFiles/chat_server.dir/src/PasswordHasher.cpp.o"
+  "CMakeFiles/chat_server.dir/src/PasswordHasher.cpp.o.d"
   "CMakeFiles/chat_server.dir/src/PersistenceSqlite.cpp.o"
   "CMakeFiles/chat_server.dir/src/PersistenceSqlite.cpp.o.d"
   "CMakeFiles/chat_server.dir/src/SocketFrameIO.cpp.o"

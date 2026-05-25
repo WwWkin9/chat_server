@@ -29,5 +29,7 @@ python3 -m http.server 4173 --directory frontend --bind 127.0.0.1
 
 说明
 - 浏览器通过 WebSocket 发送 JSON 消息：{type:'join', room:100, username:'lin'} 或 {type:'msg', text:'hello'}。
+- 认证相关：{type:'register', username:'alice', password:'p@ss'}、{type:'login', username:'alice', password:'p@ss'}。
 - 桥接会把这些消息转换为后端的文本帧，例如 `CHAT|1|JOIN|100|lin`、`CHAT|1|MSG|hello`。
+- 认证消息会转换为 `CHAT|1|REGISTER|alice|p@ss` 或 `CHAT|1|LOGIN|alice|p@ss`。
 - 桥接把来自后端的 TCP 帧原样转发给浏览器，浏览器会收到 JSON 格式 {type:'frame', body:'...'}。

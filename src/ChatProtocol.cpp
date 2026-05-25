@@ -13,6 +13,8 @@ constexpr std::string_view kFramePrefix = "CHAT";
 constexpr std::string_view kJoinType = "JOIN";
 constexpr std::string_view kMessageType = "MSG";
 constexpr std::string_view kAuthType = "AUTH";
+constexpr std::string_view kRegisterType = "REGISTER";
+constexpr std::string_view kLoginType = "LOGIN";
 constexpr std::string_view kAuthAckType = "AUTH_ACK";
 constexpr std::string_view kHeartbeatType = "PING";
 constexpr std::string_view kErrorType = "ERR";
@@ -195,6 +197,11 @@ bool validateUsername(const std::string& username, ChatProtocolErrorCode* errorC
 bool validateMessageText(const std::string& text, ChatProtocolErrorCode* errorCode, std::string* errorMessage)
 {
     return validateTextField(text, kChatProtocolMaxMessageBytes, false, errorCode, errorMessage);
+}
+
+bool validatePassword(const std::string& text, ChatProtocolErrorCode* errorCode, std::string* errorMessage)
+{
+    return validateTextField(text, kChatProtocolMaxPasswordBytes, false, errorCode, errorMessage);
 }
 
 bool validateErrorMessage(const std::string& text, ChatProtocolErrorCode* errorCode, std::string* errorMessage)
@@ -411,6 +418,52 @@ std::optional<ChatProtocolMessage> parseChatProtocolMessage(const std::string& f
                                        ChatProtocolPayload{ChatAuthMessage{parts[3]}}};
         }
 
+        if (type == kRegisterType)
+        {
+            if (parts.size() != 5)
+            {
+                appendError(errorCode, errorMessage, ChatProtocolErrorCode::InvalidFormat,
+                            "REGISTER frame must contain username and password");
+                return std::nullopt;
+            }
+
+            if (!validateUsername(parts[3], errorCode, errorMessage))
+            {
+                return std::nullopt;
+            }
+
+            if (!validatePassword(parts[4], errorCode, errorMessage))
+            {
+                return std::nullopt;
+            }
+
+            return ChatProtocolMessage{kChatProtocolVersion, ChatMessageType::Register,
+                                       ChatProtocolPayload{ChatCredentialMessage{parts[3], parts[4]}}};
+        }
+
+        if (type == kLoginType)
+        {
+            if (parts.size() != 5)
+            {
+                appendError(errorCode, errorMessage, ChatProtocolErrorCode::InvalidFormat,
+                            "LOGIN frame must contain username and password");
+                return std::nullopt;
+            }
+
+            if (!validateUsername(parts[3], errorCode, errorMessage))
+            {
+                return std::nullopt;
+            }
+
+            if (!validatePassword(parts[4], errorCode, errorMessage))
+            {
+                return std::nullopt;
+            }
+
+            return ChatProtocolMessage{kChatProtocolVersion, ChatMessageType::Login,
+                                       ChatProtocolPayload{ChatCredentialMessage{parts[3], parts[4]}}};
+        }
+
         if (type == kAuthAckType)
         {
             if (parts.size() != 4)
@@ -491,6 +544,24 @@ std::string encodeChatProtocolMessage(const ChatProtocolMessage& message)
             if constexpr (std::is_same_v<PayloadT, ChatAuthMessage>)
             {
                 return encodeVersionedFrame("AUTH", payload.token);
+            }
+            return {};
+        }, message.payload);
+    case ChatMessageType::Register:
+        return std::visit([](const auto& payload) -> std::string {
+            using PayloadT = std::decay_t<decltype(payload)>;
+            if constexpr (std::is_same_v<PayloadT, ChatCredentialMessage>)
+            {
+                return encodeVersionedFrame("REGISTER", payload.username + "|" + payload.password);
+            }
+            return {};
+        }, message.payload);
+    case ChatMessageType::Login:
+        return std::visit([](const auto& payload) -> std::string {
+            using PayloadT = std::decay_t<decltype(payload)>;
+            if constexpr (std::is_same_v<PayloadT, ChatCredentialMessage>)
+            {
+                return encodeVersionedFrame("LOGIN", payload.username + "|" + payload.password);
             }
             return {};
         }, message.payload);

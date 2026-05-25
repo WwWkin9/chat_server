@@ -52,6 +52,24 @@ find build -type f -executable -maxdepth 3 -name "chat_server*"
 - 新增了一个独立的静态前端页面，位于 `frontend/index.html`。
 - 直接在浏览器中打开该文件即可查看页面设计，后续也可以很方便地接入真实接口。
 
+登录与注册（SQLite 持久化）
+- 当配置 `DB_PATH`（或环境变量 `CHAT_SERVER_DB_PATH`）后，服务会启用数据库用户体系，并要求客户端先认证再入房。
+- 新增协议帧：
+
+```text
+CHAT|1|REGISTER|<username>|<password>
+CHAT|1|LOGIN|<username>|<password>
+```
+
+- 认证成功响应：
+
+```text
+CHAT|1|AUTH_ACK|<username>
+```
+
+- 密码不会明文存储。服务端会为每个用户生成随机盐并进行多轮 SHA-256 哈希后写入 SQLite `users` 表。
+- 若未配置数据库，则上述用户名密码认证不可用，仍可使用现有 token 认证（若配置 `AUTH_TOKENS`）。
+
 测试
 - 使用 CTest 运行所有单元测试：
 

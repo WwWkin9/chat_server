@@ -24,6 +24,7 @@ set(CHAT_SERVER_SOURCES
     src/ChatRoomManager.cpp
     src/Utils.cpp
     src/PersistenceSqlite.cpp
+    src/PasswordHasher.cpp
     src/WorkerReactor.cpp
 )
 
@@ -40,6 +41,7 @@ set(CHAT_SERVER_TEST_SOURCES
     src/Logger.cpp
     src/Metrics.cpp
     src/PersistenceSqlite.cpp
+    src/PasswordHasher.cpp
 )
 
 add_executable(chat_server_tests ${CHAT_SERVER_TEST_SOURCES})

@@ -72,6 +72,26 @@ void testProtocolRoundTrip()
     }
 
     {
+        const auto parsed = parseChatProtocolMessage("CHAT|1|REGISTER|alice|s3cret");
+        require(parsed.has_value(), "register frame should parse");
+        require(parsed->type == ChatMessageType::Register, "register type");
+        const auto& reg = std::get<ChatCredentialMessage>(parsed->payload);
+        require(reg.username == "alice", "register username");
+        require(reg.password == "s3cret", "register password");
+        require(encodeChatProtocolMessage(*parsed) == "CHAT|1|REGISTER|alice|s3cret", "register encode");
+    }
+
+    {
+        const auto parsed = parseChatProtocolMessage("CHAT|1|LOGIN|alice|s3cret");
+        require(parsed.has_value(), "login frame should parse");
+        require(parsed->type == ChatMessageType::Login, "login type");
+        const auto& login = std::get<ChatCredentialMessage>(parsed->payload);
+        require(login.username == "alice", "login username");
+        require(login.password == "s3cret", "login password");
+        require(encodeChatProtocolMessage(*parsed) == "CHAT|1|LOGIN|alice|s3cret", "login encode");
+    }
+
+    {
         const std::string encoded = encodeErrorResponse(ChatProtocolErrorCode::RateLimited, "too fast");
         const auto parsed = parseChatProtocolMessage(encoded);
         require(parsed.has_value(), "error frame should parse");
@@ -221,6 +241,60 @@ void testBroadcastFailureStrategies()
                 "reject should notify sender");
     }
 }
+
+void testPasswordRegisterLogin()
+{
+    char dbPathTemplate[] = "/tmp/chat_server_users_XXXXXX";
+    const int fd = mkstemp(dbPathTemplate);
+    require(fd >= 0, "mkstemp db path should succeed");
+    close(fd);
+
+    Config cfg;
+    cfg.dbPath = dbPathTemplate;
+    ChatRoomManager manager(1);
+    ChatRoomService service(manager, cfg);
+
+    ChatSession aliceSession;
+    std::vector<std::pair<int, std::string>> sends;
+    std::vector<std::pair<int, std::string>> disconnects;
+
+    const auto sendMessage = [&](int targetFd, const std::string& msg) {
+        sends.emplace_back(targetFd, msg);
+        return true;
+    };
+    const auto disconnectClient = [&](int targetFd, const std::string& reason) {
+        disconnects.emplace_back(targetFd, reason);
+    };
+
+    service.processIncomingFrame(1, aliceSession, "CHAT|1|REGISTER|alice|password123", sendMessage, disconnectClient);
+    require(aliceSession.authenticated, "register should authenticate the session");
+    require(aliceSession.username == "alice", "register should set username");
+    require(std::any_of(sends.begin(), sends.end(), [](const auto& item) {
+        return item.first == 1 && item.second == "CHAT|1|AUTH_ACK|alice";
+    }), "register should send auth ack");
+    require(disconnects.empty(), "register should not disconnect");
+
+    ChatSession wrongPasswordSession;
+    sends.clear();
+    disconnects.clear();
+    service.processIncomingFrame(2, wrongPasswordSession, "CHAT|1|LOGIN|alice|badpass", sendMessage, disconnectClient);
+    require(!wrongPasswordSession.authenticated, "wrong password should not authenticate");
+    require(std::any_of(sends.begin(), sends.end(), [](const auto& item) {
+        return item.first == 2 && item.second.find("invalid username or password") != std::string::npos;
+    }), "wrong password should return error");
+
+    ChatSession loginSession;
+    sends.clear();
+    disconnects.clear();
+    service.processIncomingFrame(3, loginSession, "CHAT|1|LOGIN|alice|password123", sendMessage, disconnectClient);
+    require(loginSession.authenticated, "login should authenticate");
+    require(loginSession.username == "alice", "login should restore username");
+    require(std::any_of(sends.begin(), sends.end(), [](const auto& item) {
+        return item.first == 3 && item.second == "CHAT|1|AUTH_ACK|alice";
+    }), "login should send auth ack");
+
+    unlink(dbPathTemplate);
+}
 }
 
 int main()
@@ -229,6 +303,7 @@ int main()
     testConfigLoading();
     testRoomManager();
     testBroadcastFailureStrategies();
+    testPasswordRegisterLogin();
     std::cout << "chat_server_tests passed" << std::endl;
     return 0;
 }

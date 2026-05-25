@@ -18,6 +18,8 @@ class Persistence
 public:
     virtual ~Persistence() = default;
     virtual bool init(const std::string& dbPath) = 0;
+    virtual bool createUser(const std::string& username, const std::string& saltHex, const std::string& passwordHashHex) = 0;
+    virtual bool getUserCredentials(const std::string& username, std::string& saltHexOut, std::string& passwordHashHexOut) = 0;
     virtual bool addMembership(int roomId, const std::string& username) = 0;
     virtual std::vector<std::string> getRoomMembers(int roomId) = 0;
     virtual bool appendAudit(int roomId, const std::string& sender, const std::string& message, long long ts) = 0;
