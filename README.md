@@ -48,6 +48,10 @@ find build -type f -executable -maxdepth 3 -name "chat_server*"
 
 （具体命令行选项请参见源码中的启动逻辑或 `--help`）
 
+前端演示页
+- 新增了一个独立的静态前端页面，位于 `frontend/index.html`。
+- 直接在浏览器中打开该文件即可查看页面设计，后续也可以很方便地接入真实接口。
+
 测试
 - 使用 CTest 运行所有单元测试：
 

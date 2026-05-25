@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="dark" />
+  <title>Chat Server · 聊天桌面</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="backdrop backdrop-a"></div>
+  <div class="backdrop backdrop-b"></div>
+
+  <main class="shell chat-app">
+    <aside class="panel sidebar">
+      <div class="brand-row">
+        <div class="brand">
+          <span class="brand-mark"></span>
+          <div>
+            <p class="eyebrow">Chat Server</p>
+            <h1>聊天桌面</h1>
+          </div>
+        </div>
+        <div class="status-chip compact">
+          <span class="pulse"></span>
+          在线
+        </div>
+      </div>
+
+      <div class="profile-card">
+        <div class="avatar large">UI</div>
+        <div>
+          <strong>lin</strong>
+          <p>在线 · 正在演示</p>
+        </div>
+        <span class="profile-badge">v1</span>
+      </div>
+
+      <label class="search-box" for="conversationSearch">
+        <span>⌕</span>
+        <input id="conversationSearch" type="search" placeholder="搜索联系人或群聊" autocomplete="off" />
+      </label>
+
+      <div class="sidebar-section">
+        <div class="section-header">
+          <h2>会话</h2>
+          <span id="conversationCount">3</span>
+        </div>
+        <div class="conversation-list" id="conversationList"></div>
+      </div>
+    </aside>
+
+    <section class="panel chat-panel">
+      <header class="chat-header">
+        <div class="chat-header-main">
+          <div class="avatar" id="activeAvatar">AL</div>
+          <div>
+            <p class="eyebrow small">当前聊天</p>
+            <h2 id="activeConversationTitle">Alice</h2>
+            <span id="activeConversationMeta">alice · 7 条未读 · 18:24 在线</span>
+          </div>
+        </div>
+        <div class="chat-header-actions">
+          <button class="icon-btn" type="button">☎</button>
+          <button class="icon-btn" type="button">⌘</button>
+          <button class="icon-btn accent" type="button">⋯</button>
+        </div>
+      </header>
+
+      <div class="status-strip">
+        <span class="dot"></span>
+        <span id="statusText">端到端加密会话 · 房间 #100</span>
+        <span class="status-strip-right">支持拖拽附件、已读回执和快捷回复</span>
+      </div>
+
+      <div class="chat-stream" id="chatStream" aria-live="polite"></div>
+
+      <div class="quick-replies" id="quickReplies"></div>
+
+      <form class="composer" id="composer">
+        <button class="composer-tool" type="button">＋</button>
+        <label class="sr-only" for="messageInput">发送消息</label>
+        <input id="messageInput" name="message" type="text" placeholder="输入消息，Enter 发送" autocomplete="off" maxlength="180" />
+        <button class="composer-tool" type="button">😊</button>
+        <button class="composer-send" type="submit">发送</button>
+      </form>
+    </section>
+
+    <aside class="panel info-panel">
+      <div class="info-card hero-card">
+        <p class="eyebrow small">联系人资料</p>
+        <div class="info-avatar" id="infoAvatar">AL</div>
+        <h3 id="infoName">Alice</h3>
+        <p id="infoBio">产品经理 · 喜欢把复杂信息整理成清晰的聊天流。</p>
+      </div>
+
+      <div class="info-card stats-card">
+        <div>
+          <span>在线状态</span>
+          <strong id="infoStatus">活跃</strong>
+        </div>
+        <div>
+          <span>会话房间</span>
+          <strong id="infoRoom">#100</strong>
+        </div>
+        <div>
+          <span>最近活跃</span>
+          <strong id="infoTime">刚刚</strong>
+        </div>
+      </div>
+
+      <div class="info-card members-card">
+        <div class="section-header">
+          <h2>共同好友</h2>
+          <span>4</span>
+        </div>
+        <div class="mini-member-list" id="memberList"></div>
+      </div>
+
+      <div class="info-card shortcuts-card">
+        <div class="section-header">
+          <h2>快捷操作</h2>
+          <span>聊天软件风格</span>
+        </div>
+        <button class="ghost-action" type="button">标为重要消息</button>
+        <button class="ghost-action" type="button">打开文件传输</button>
+        <button class="ghost-action" type="button">查看聊天记录</button>
+      </div>
+    </aside>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
