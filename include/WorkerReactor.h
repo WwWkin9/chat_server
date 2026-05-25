@@ -41,9 +41,9 @@ public:
     void start();
     void stop();
 
-    // called from acceptor thread
+    // 由 acceptor 线程调用
     void addClientFd(int fd);
-    // thread-safe enqueue message for fd owned by this reactor
+    // 线程安全地为本 reactor 所属的 fd 入队消息
     bool enqueueMessage(int fd, const std::string& message);
     void disconnectClient(int fd, const std::string& reason);
     void adoptClientState(ClientState state);
@@ -66,14 +66,14 @@ private:
     std::atomic<bool> running_{false};
     std::thread thread_;
 
-    // pending operations from other threads
+    // 来自其他线程的待处理操作
     std::mutex pendingMtx_;
     std::vector<int> pendingNewFds_;
     std::unordered_map<int, std::vector<std::string>> pendingMsgs_;
     std::vector<int> pendingDisconnects_;
     std::vector<ClientState> pendingAdoptions_;
 
-    // per-reactor clients, only accessed by reactor thread
+    // 每个 reactor 自己维护的客户端，只能由 reactor 线程访问
     std::unordered_map<int, ClientState> clients_;
     int epollFd_ = -1;
     int eventFd_ = -1;

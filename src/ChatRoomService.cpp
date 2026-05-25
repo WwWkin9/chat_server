@@ -20,11 +20,54 @@ ChatRoomService::ChatRoomService(ChatRoomManager& roomManager, const Config& cfg
 {
     if (!cfg_.dbPath.empty())
     {
-        persistence_ = CreateSqlitePersistence(cfg_.dbPath);
+        persistence_.reset(CreateSqlitePersistence(cfg_.dbPath));
         if (!persistence_)
         {
             // Failed to initialize persistence, leave as nullptr but log
             std::cerr << "Warning: failed to init persistence at " << cfg_.dbPath << std::endl;
+        }
+    }
+}
+
+bool ChatRoomService::sendErrorOrDisconnect(int clientFd, const SendMessageFn& sendMessage,
+                                            const DisconnectFn& disconnectClient,
+                                            ChatProtocolErrorCode code, const std::string& message,
+                                            const std::string& disconnectReason)
+{
+    if (sendMessage(clientFd, encodeErrorResponse(code, message)))
+    {
+        return true;
+    }
+
+    disconnectClient(clientFd, disconnectReason);
+    return false;
+}
+
+void ChatRoomService::pruneExpiredRateWindows(std::chrono::steady_clock::time_point now)
+{
+    const auto cleanupAge = std::chrono::minutes(1);
+
+    for (auto it = userMsgWindow_.begin(); it != userMsgWindow_.end();)
+    {
+        if (now - it->second.second > cleanupAge)
+        {
+            it = userMsgWindow_.erase(it);
+        }
+        else
+        {
+            ++it;
+        }
+    }
+
+    for (auto it = roomMsgWindow_.begin(); it != roomMsgWindow_.end();)
+    {
+        if (now - it->second.second > cleanupAge)
+        {
+            it = roomMsgWindow_.erase(it);
+        }
+        else
+        {
+            ++it;
         }
     }
 }
@@ -38,18 +81,18 @@ void ChatRoomService::processIncomingFrame(int clientFd, ChatSession& session, c
     const std::optional<ChatProtocolMessage> message = parseChatProtocolMessage(frameBody, &parseErrorCode, &parseErrorMessage);
     if (!message)
     {
-        if (!sendMessage(clientFd, encodeErrorResponse(parseErrorCode, parseErrorMessage)))
-        {
-            disconnectClient(clientFd, "output buffer full");
-        }
+        sendErrorOrDisconnect(clientFd, sendMessage, disconnectClient, parseErrorCode, parseErrorMessage,
+                              "output buffer full");
         return;
     }
 
     // Rate limiting checks (only for message frames)
     if (message->type == ChatMessageType::Message)
     {
-        // global window
         auto now = std::chrono::steady_clock::now();
+        pruneExpiredRateWindows(now);
+
+        // global window
         if (now - globalMsgWindow_.second >= std::chrono::seconds(1))
         {
             globalMsgWindow_.second = now;
@@ -58,10 +101,8 @@ void ChatRoomService::processIncomingFrame(int clientFd, ChatSession& session, c
         globalMsgWindow_.first++;
         if (globalMsgWindow_.first > cfg_.globalMsgPerSecond)
         {
-            if (!sendMessage(clientFd, encodeErrorResponse(ChatProtocolErrorCode::RateLimited, "global rate limit exceeded")))
-            {
-                disconnectClient(clientFd, "global rate limit");
-            }
+            sendErrorOrDisconnect(clientFd, sendMessage, disconnectClient, ChatProtocolErrorCode::RateLimited,
+                                  "global rate limit exceeded", "global rate limit");
             return;
         }
 
@@ -77,10 +118,8 @@ void ChatRoomService::processIncomingFrame(int clientFd, ChatSession& session, c
             uit->second.first++;
             if (uit->second.first > cfg_.userMsgPerSecond)
             {
-                if (!sendMessage(clientFd, encodeErrorResponse(ChatProtocolErrorCode::RateLimited, "user rate limit exceeded")))
-                {
-                    disconnectClient(clientFd, "user rate limit");
-                }
+                sendErrorOrDisconnect(clientFd, sendMessage, disconnectClient, ChatProtocolErrorCode::RateLimited,
+                                      "user rate limit exceeded", "user rate limit");
                 return;
             }
         }
@@ -98,10 +137,8 @@ void ChatRoomService::processIncomingFrame(int clientFd, ChatSession& session, c
                 rit->second.first++;
                 if (rit->second.first > cfg_.roomMsgPerSecond)
                 {
-                    if (!sendMessage(clientFd, encodeErrorResponse(ChatProtocolErrorCode::RateLimited, "room rate limit exceeded")))
-                    {
-                        disconnectClient(clientFd, "room rate limit");
-                    }
+                    sendErrorOrDisconnect(clientFd, sendMessage, disconnectClient, ChatProtocolErrorCode::RateLimited,
+                                          "room rate limit exceeded", "room rate limit");
                     return;
                 }
             }
@@ -120,10 +157,8 @@ void ChatRoomService::processIncomingFrame(int clientFd, ChatSession& session, c
                 auto it = cfg_.authTokenToUser.find(auth.token);
                 if (it == cfg_.authTokenToUser.end())
                 {
-                    if (!sendMessage(clientFd, encodeErrorResponse(ChatProtocolErrorCode::InvalidField, "invalid auth token")))
-                    {
-                        disconnectClient(clientFd, "output buffer full");
-                    }
+                    sendErrorOrDisconnect(clientFd, sendMessage, disconnectClient, ChatProtocolErrorCode::InvalidField,
+                                          "invalid auth token", "output buffer full");
                     return;
                 }
 
@@ -143,37 +178,28 @@ void ChatRoomService::processIncomingFrame(int clientFd, ChatSession& session, c
 
             if (requireAuth)
             {
-                if (!sendMessage(clientFd, encodeErrorResponse(ChatProtocolErrorCode::InvalidField, "authentication required")))
-                {
-                    disconnectClient(clientFd, "output buffer full");
-                }
+                sendErrorOrDisconnect(clientFd, sendMessage, disconnectClient, ChatProtocolErrorCode::InvalidField,
+                                      "authentication required", "output buffer full");
                 return;
             }
         }
 
         // legacy or post-auth join
-            if (message->type == ChatMessageType::Join)
-            {
-                const auto& joinMessage = std::get<ChatJoinMessage>(message->payload);
-                // persist membership if persistence configured
-                if (persistence_)
-                {
-                    persistence_->addMembership(joinMessage.roomId, session.authenticated ? session.username : joinMessage.username);
-                }
+        if (message->type == ChatMessageType::Join)
+        {
+            const auto& joinMessage = std::get<ChatJoinMessage>(message->payload);
+            const std::string username = session.authenticated ? session.username : joinMessage.username;
 
-                // if authenticated, enforce authenticated username
-                if (session.authenticated)
-                {
-                    handleJoin(clientFd, session, JoinInfo{joinMessage.roomId, session.username, {}}, sendMessage,
-                               disconnectClient);
-                }
-                else
-                {
-                    handleJoin(clientFd, session, JoinInfo{joinMessage.roomId, joinMessage.username, {}}, sendMessage,
-                               disconnectClient);
-                }
-                return;
+            // persist membership if persistence configured
+            if (persistence_)
+            {
+                persistence_->addMembership(joinMessage.roomId, username);
             }
+
+            handleJoin(clientFd, session, JoinInfo{joinMessage.roomId, username, {}}, sendMessage,
+                       disconnectClient);
+            return;
+        }
 
         if (message->type == ChatMessageType::Message)
         {
@@ -205,11 +231,8 @@ void ChatRoomService::processIncomingFrame(int clientFd, ChatSession& session, c
 
     if (message->type == ChatMessageType::Join)
     {
-        if (!sendMessage(clientFd, encodeErrorResponse(ChatProtocolErrorCode::InvalidField,
-                                                      "client is already joined")))
-        {
-            disconnectClient(clientFd, "output buffer full");
-        }
+        sendErrorOrDisconnect(clientFd, sendMessage, disconnectClient, ChatProtocolErrorCode::InvalidField,
+                              "client is already joined", "output buffer full");
         return;
     }
 
@@ -224,7 +247,8 @@ void ChatRoomService::processIncomingFrame(int clientFd, ChatSession& session, c
     Metrics::instance().incMessagesReceived();
 
     // deliver to live users
-    broadcastToRoom(session, "Client[" + session.username + "]: " + textMessage.text, sendMessage, disconnectClient);
+    broadcastToRoom(clientFd, session, "Client[" + session.username + "]: " + textMessage.text, sendMessage,
+                    disconnectClient);
     Metrics::instance().incMessagesBroadcasted();
 
     // store offline messages for persisted members who are not currently connected
@@ -256,7 +280,7 @@ void ChatRoomService::detachClient(int clientFd, ChatSession& session, const Sen
         return;
     }
 
-    broadcastToRoom(session, "[server] " + session.username + " left: " + std::to_string(clientFd),
+    broadcastToRoom(clientFd, session, "[server] " + session.username + " left: " + std::to_string(clientFd),
                     sendMessage, disconnectClient);
     session.room->removeClient(session.user);
     session.joined = false;
@@ -284,17 +308,17 @@ void ChatRoomService::handleJoin(int clientFd, ChatSession& session, const JoinI
         return;
     }
 
-    broadcastToRoom(session, "[server] " + session.username + " connected to room " + std::to_string(session.roomId),
+    broadcastToRoom(clientFd, session, "[server] " + session.username + " connected to room " + std::to_string(session.roomId),
                     sendMessage, disconnectClient);
 
     if (!joinInfo.pendingMessage.empty())
     {
-        broadcastToRoom(session, "Client[" + session.username + "]: " + joinInfo.pendingMessage,
+        broadcastToRoom(clientFd, session, "Client[" + session.username + "]: " + joinInfo.pendingMessage,
                         sendMessage, disconnectClient);
     }
 }
 
-void ChatRoomService::broadcastToRoom(const ChatSession& session, const std::string& message,
+    void ChatRoomService::broadcastToRoom(int senderFd, const ChatSession& session, const std::string& message,
                                       const SendMessageFn& sendMessage,
                                       const DisconnectFn& disconnectClient)
 {
@@ -320,12 +344,19 @@ void ChatRoomService::broadcastToRoom(const ChatSession& session, const std::str
         if (!sendMessage(static_cast<int>(user->id()), message))
         {
             Metrics::instance().incBroadcastFailures();
-            // apply reject strategy
             if (cfg_.rejectStrategy == "disconnect")
             {
                 disconnectClient(static_cast<int>(user->id()), "output buffer full");
             }
-            // if "drop" or "reject" we simply skip delivering to this user
+            else if (cfg_.rejectStrategy == "reject")
+            {
+                if (!sendMessage(senderFd, encodeErrorResponse(ChatProtocolErrorCode::RateLimited,
+                                                              "broadcast rejected due to slow recipient")))
+                {
+                    disconnectClient(senderFd, "output buffer full");
+                }
+                break;
+            }
         }
         else
         {

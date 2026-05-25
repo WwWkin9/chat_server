@@ -40,7 +40,7 @@ void ChatRoom::broadcast(const std::string& msg, const User::Ptr& sender,
 {
     if (!deliver)
     {
-        // No delivery callback provided; ChatRoom will not perform I/O directly.
+        // 未提供投递回调时，ChatRoom 不会直接执行 I/O。
         return;
     }
 

@@ -36,7 +36,7 @@ WorkerReactor::~WorkerReactor()
 void WorkerReactor::start()
 {
     if (running_.exchange(true)) return;
-    // create epoll and eventfd
+    // 创建 epoll 和 eventfd
     epollFd_ = epoll_create1(0);
     eventFd_ = eventfd(0, EFD_NONBLOCK | EFD_CLOEXEC);
     if (epollFd_ < 0 || eventFd_ < 0)
@@ -57,7 +57,7 @@ void WorkerReactor::start()
 void WorkerReactor::stop()
 {
     if (!running_.exchange(false)) return;
-    // wake up
+    // 唤醒线程
     uint64_t one = 1;
     if (eventFd_ >= 0) write(eventFd_, &one, sizeof(one));
     if (thread_.joinable()) thread_.join();
@@ -217,7 +217,7 @@ void WorkerReactor::run()
             break;
         }
 
-        // process wakeups / pending ops first
+        // 先处理唤醒和待处理操作
         processPending();
 
         for (int i = 0; i < n; ++i)
@@ -240,7 +240,7 @@ void WorkerReactor::run()
                 client.lastActivity = std::chrono::steady_clock::now();
                 if (!receiveIntoBuffer(fd, client.inputBuffer))
                 {
-                    // disconnect
+                    // 断开连接
                     roomService_.detachClient(fd, client.session,
                                               [this](int targetFd, const std::string& message) { return router_(targetFd, message); },
                                               [this](int targetFd, const std::string& reason) { disrouter_(targetFd, reason); });
@@ -253,7 +253,7 @@ void WorkerReactor::run()
                 std::string body;
                 while (popFrame(client.inputBuffer, body))
                 {
-                    if (body.size() > 16*1024) // basic limit
+                        if (body.size() > 16*1024) // 基本限制
                     {
                         router_(fd, "ERR|frame too large");
                         roomService_.detachClient(fd, client.session,
@@ -308,7 +308,7 @@ void WorkerReactor::run()
             }
         }
 
-        // periodic idle reap
+        // 周期性回收空闲连接
         auto now = std::chrono::steady_clock::now();
         std::vector<int> toDisconnect;
         for (auto &p : clients_)

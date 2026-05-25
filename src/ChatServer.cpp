@@ -56,11 +56,11 @@ bool ChatServer::run()
         return false;
     }
 
-    // create worker reactors
+    // 创建 worker reactor
     reactorCount_ = cfg_.reactorThreads > 0 ? cfg_.reactorThreads : std::max(1u, std::thread::hardware_concurrency());
     for (size_t i = 0; i < reactorCount_; ++i)
     {
-        // router lambdas will call back into this ChatServer to route to correct reactor
+        // 路由回调会返回到这个 ChatServer，由它转发到对应的 reactor
         auto router = [this](int targetFd, const std::string& message) -> bool { return this->routeSendMessage(targetFd, message); };
         auto disrouter = [this](int targetFd, const std::string& reason) { this->routeDisconnect(targetFd, reason); };
         auto affinity = [this](int roomId) -> std::size_t { return this->roomAffinityIndex(roomId); };
@@ -72,7 +72,7 @@ bool ChatServer::run()
     std::cout << "Chat server started on port " << port_ << std::endl;
     Logger::info("server_start", "\"port\":" + std::to_string(port_));
 
-    // start health HTTP server on port+1
+    // 在 port+1 启动健康检查 HTTP 服务
     std::atomic<bool> healthRunning{true};
     std::thread healthThread([this, &healthRunning]() {
         int hp = port_ + 1;
@@ -107,7 +107,7 @@ bool ChatServer::run()
         close(s);
     });
 
-    // acceptor loop: accept new connections and dispatch to worker reactors
+    // 接收循环：接收新连接并分发给 worker reactor
     while (!g_stopRequested)
     {
         acceptNewClients();
@@ -117,7 +117,7 @@ bool ChatServer::run()
     std::cout << "Shutdown requested, entering graceful shutdown" << std::endl;
     Logger::info("shutdown_requested", "");
 
-    // stop accepting new connections
+    // 停止接收新连接
     if (listenFd_ >= 0)
     {
         close(listenFd_);
@@ -125,16 +125,16 @@ bool ChatServer::run()
         Logger::info("stop_accepting", "");
     }
 
-    // compute deadline
+    // 计算优雅退出的截止时间
     auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(cfg_.gracefulShutdownSeconds);
 
-    // signal reactors to stop and allow draining until deadline
+    // 通知各 reactor 停止，并允许它们在截止时间前完成收尾
     for (auto &r : reactors_)
     {
         if (r) r->stop(); // stop will join thread after wakeup
     }
 
-    // persist state if configured
+    // 如果启用了持久化，则保存状态
     if (cfg_.persistOnShutdown)
     {
         Logger::info("persisting_state", "");
@@ -298,21 +298,21 @@ void ChatServer::routeDisconnect(int fd, const std::string& reason)
 
 void ChatServer::cleanup()
 {
-    // stop reactors
+    // 停止各个 reactor
     for (auto &r : reactors_)
     {
         if (r) r->stop();
     }
     reactors_.clear();
 
-    // close listen socket
+    // 关闭监听 socket
     if (listenFd_ >= 0)
     {
         close(listenFd_);
         listenFd_ = -1;
     }
 
-    // clear fd map
+    // 清空 fd 到 reactor 的映射
     {
         std::lock_guard<std::mutex> lk(fdMapMtx_);
         fdToReactor_.clear();

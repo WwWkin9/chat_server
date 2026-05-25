@@ -24,7 +24,7 @@ struct Config
     int globalMsgPerSecond = 5000; // global server-wide messages per second
     int maxBroadcastFanout = 1000; // max recipients per broadcast
     std::size_t outputHighWaterBytes = 512 * 1024; // per-client high watermark
-    std::string rejectStrategy = "disconnect"; // disconnect | drop | reject
+    std::string rejectStrategy = "disconnect"; // disconnect: 断开慢客户端; drop: 直接丢弃; reject: 反馈给发送者并停止本次广播
     int gracefulShutdownSeconds = 10; // seconds to wait for in-flight requests
     bool persistOnShutdown = true; // persist rooms/members on shutdown
     int reactorThreads = 0; // 0 means auto-detect from hardware concurrency

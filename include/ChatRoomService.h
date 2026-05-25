@@ -8,6 +8,7 @@
 
 #include <functional>
 #include <chrono>
+#include <memory>
 #include <unordered_map>
 
 class ChatRoomService
@@ -25,16 +26,21 @@ public:
                       const DisconnectFn& disconnectClient);
 
 private:
+    bool sendErrorOrDisconnect(int clientFd, const SendMessageFn& sendMessage,
+                                const DisconnectFn& disconnectClient,
+                                ChatProtocolErrorCode code, const std::string& message,
+                                const std::string& disconnectReason);
+    void pruneExpiredRateWindows(std::chrono::steady_clock::time_point now);
     void handleJoin(int clientFd, ChatSession& session, const JoinInfo& joinInfo,
                     const SendMessageFn& sendMessage,
                     const DisconnectFn& disconnectClient);
-    void broadcastToRoom(const ChatSession& session, const std::string& message,
+    void broadcastToRoom(int senderFd, const ChatSession& session, const std::string& message,
                          const SendMessageFn& sendMessage,
                          const DisconnectFn& disconnectClient);
 
     ChatRoomManager& roomManager_;
     const Config& cfg_;
-    Persistence* persistence_ = nullptr;
+    std::unique_ptr<Persistence> persistence_;
     // rate windows
     std::unordered_map<std::string, std::pair<int, std::chrono::steady_clock::time_point>> userMsgWindow_;
     std::unordered_map<int, std::pair<int, std::chrono::steady_clock::time_point>> roomMsgWindow_;
