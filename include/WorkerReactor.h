@@ -29,8 +29,6 @@ public:
         std::string outputBuffer;
         std::chrono::steady_clock::time_point lastActivity;
         ChatSession session;
-        std::chrono::steady_clock::time_point msgWindowStart = std::chrono::steady_clock::now();
-        int msgsInWindow = 0;
     };
 
     using MigrateFn = std::function<void(std::size_t, ClientState)>;

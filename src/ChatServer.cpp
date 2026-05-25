@@ -21,18 +21,13 @@
 ChatServer::ChatServer(const Config& cfg)
         : port_(cfg.port), maxOutputBufferBytes_(cfg.maxOutputBufferBytes),
             clientIdleTimeout_{std::chrono::seconds(cfg.clientIdleTimeoutSeconds)},
-            backlog_{cfg.backlog}, roomLimit_{cfg.roomLimit}, logLevel_(cfg.logLevel),
-            tlsCertPath_(cfg.tlsCertPath), tlsKeyPath_(cfg.tlsKeyPath), roomManager_(cfg.roomShardCount), roomService_(roomManager_, cfg),
-            maxInputFrameBytes_(cfg.maxInputFrameBytes), connMsgPerSecond_(cfg.connMsgPerSecond),
+            backlog_{cfg.backlog}, roomManager_(cfg.roomShardCount), roomService_(roomManager_, cfg),
             cfg_(cfg)
 {
 }
 
 namespace
 {
-constexpr int MAX_EVENTS = 1024;
-// backlog configured via Config.backlog_
-constexpr int EPOLL_WAIT_TIMEOUT_MS = 1000;
 constexpr auto DEFAULT_CLIENT_IDLE_TIMEOUT = std::chrono::minutes(15);
 
 volatile sig_atomic_t g_stopRequested = 0;
@@ -299,48 +294,6 @@ void ChatServer::routeDisconnect(int fd, const std::string& reason)
     }
     if (idx < 0 || static_cast<size_t>(idx) >= reactors_.size()) return;
     reactors_[idx]->disconnectClient(fd, reason);
-}
-
-void ChatServer::handleReadableClients(int /*fd*/)
-{
-    // Deprecated in multi-reactor mode; worker reactors handle readable events.
-}
-
-void ChatServer::handleWritableClients(int /*fd*/)
-{
-    // Deprecated in multi-reactor mode; worker reactors handle writable events.
-}
-
-bool ChatServer::enqueueMessage(int fd, const std::string& message)
-{
-    // route to owning reactor
-    return routeSendMessage(fd, message);
-}
-
-void ChatServer::markClientActive(int /*fd*/)
-{
-    // no-op in multi-reactor mode
-}
-
-void ChatServer::reapIdleClients()
-{
-    // idle reaping handled per-reactor
-}
-
-bool ChatServer::updateClientWriteInterest(int /*fd*/, bool /*enableWrite*/)
-{
-    return false;
-}
-
-bool ChatServer::registerClient(int /*fd*/)
-{
-    return false;
-}
-
-void ChatServer::disconnectClient(int fd, const std::string& reason)
-{
-    // route disconnect to the owning reactor
-    routeDisconnect(fd, reason);
 }
 
 void ChatServer::cleanup()
