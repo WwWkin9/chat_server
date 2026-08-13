@@ -1,5 +1,5 @@
 # Build and intermediate files
-/build/
+build/
 /CMakeFiles/
 /CMakeCache.txt
 /cmake_install.cmake
